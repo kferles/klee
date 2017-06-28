@@ -308,6 +308,11 @@ namespace {
   MaxForks("max-forks",
            cl::desc("Only fork this many times (default=-1 (off))"),
            cl::init(~0u));
+
+  cl::opt<bool>
+  DetMaxForks("det-max-forks",
+              cl::desc("Choose the next state deterministically after reaching the fork limit"),
+              cl::init(false));
   
   cl::opt<unsigned>
   MaxDepth("max-depth",
@@ -707,7 +712,7 @@ void Executor::branch(ExecutionState &state,
   assert(N);
 
   if (MaxForks!=~0u && stats::forks >= MaxForks) {
-    unsigned next = theRNG.getInt32() % N;
+    unsigned next = !DetMaxForks ? theRNG.getInt32() % N : 0;
     for (unsigned i=0; i<N; ++i) {
       if (i == next) {
         result.push_back(&state);
@@ -869,10 +874,17 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 	  klee_warning_once(0, "skipping fork (max-forks reached)");
 
         TimerStatIncrementer timer(stats::forkTime);
-        if (theRNG.getBool()) {
-          addConstraint(current, condition);
-          res = Solver::True;        
-        } else {
+
+        if (!DetMaxForks) {
+          if (theRNG.getBool()) {
+            addConstraint(current, condition);
+            res = Solver::True;
+          } else {
+            addConstraint(current, Expr::createIsZero(condition));
+            res = Solver::False;
+          }
+        }
+        else {
           addConstraint(current, Expr::createIsZero(condition));
           res = Solver::False;
         }

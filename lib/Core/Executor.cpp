@@ -311,7 +311,7 @@ namespace {
 
   cl::opt<bool>
   DetMaxForks("det-max-forks",
-              cl::desc("Choose the next state deterministically after reaching the fork limit"),
+              cl::desc("Choose the next state deterministically after reaching the fork limit (default=false (off))"),
               cl::init(false));
   
   cl::opt<unsigned>
